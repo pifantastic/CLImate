@@ -1,0 +1,75 @@
+#!/usr/bin/env node
+
+var fs = require('fs');
+var path = require('path');
+var util = require('util');
+
+var colors = require('colors');
+
+var weather = require('../lib/weather');
+
+var icons = {
+  'snow':      '☃❄'.cyan,
+  'clear':     '☼'.blue,
+  'sun':       '☀'.yellow,
+  'cloud':     '☁'.white,
+  'rain':      '☔'.blue,
+  'overcast':  '☁'.grey,
+  'shower':    '☂☁',
+  'lightning': '⚡'.yellow,
+  'thunder':   '⚡'.yellow,
+  'haze':      '≈'
+};
+
+var location = process.argv.slice(2).join(' ');
+var home = process.env[(process.platform === 'win32') ? 'USERPROFILE' : 'HOME'];
+var rc = path.join(home, '.weather');
+
+if (!location && fs.existsSync(rc)) {
+  location = fs.readFileSync(rc).toString().trim();
+}
+
+function formatTemp (f, c) {
+  return util.format("\x02%s°F\x02/\x02%s°C\x02", f, c);
+}
+
+weather.conditions(location, function (err, data) {
+  var message;
+
+  if (err) {
+    message = util.format('%s %s', 'Error!'.red, err);
+  }
+  else if (data.response.error) {
+    message = util.format('%s %s', 'Error!'.red, data.response.error.description);
+  }
+  else if (data.response.results) {
+    message = util.format('Found %s cities searching for "%s", please be more specific!',
+      data.response.results.length,
+      location
+    );
+  }
+  else {
+    var obs = data.current_observation;
+
+    var feelsLike = Math.round(obs.temp_c) != Math.round(obs.feelslike_c) ?
+      util.format('Feels like %s. ', formatTemp(obs.feelslike_f, obs.feelslike_c)) :
+      '';
+
+    var currIcons = Object.keys(icons)
+      .filter(function(i) { return RegExp(i, 'i').test(obs.weather); })
+      .map(function(i) { return icons[i]; })
+      .join('');
+
+    message = util.format('%s %s %s. %s%s',
+      currIcons,
+      obs.weather,
+      formatTemp(obs.temp_f, obs.temp_c),
+      feelsLike,
+      obs.display_location.full
+    );
+  }
+
+  console.log(message);
+
+  fs.writeFileSync(rc, location);
+});
