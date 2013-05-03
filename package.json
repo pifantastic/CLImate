@@ -2,10 +2,16 @@
   "name": "CLImate",
   "version": "0.0.0",
   "description": "Weather info from your shell",
-  "main": "bin/weather",
+  "bin": {
+    "weather": "bin/weather"
+  },
+  "engines": {
+    "node": ">= 0.8.0"
+  },
   "scripts": {
     "test": "grunt test"
   },
+  "preferGlobal": true,
   "repository": "",
   "keywords": [
     "weather",
